@@ -6,6 +6,9 @@ import { Server } from "socket.io";
 
 import connectDB from "./db.js";
 
+import Poll from "./models/Poll.js";
+import Vote from "./models/Vote.js";
+
 dotenv.config();
 
 const app = express();
