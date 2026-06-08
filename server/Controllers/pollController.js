@@ -1,5 +1,6 @@
 import Poll from "../models/Poll.js";
 import Vote from "../models/Vote.js";
+import { io } from "../server.js";
 
 /*
  * Create a new poll
@@ -139,6 +140,9 @@ export const votePoll = async (req, res) => {
     poll.options[optionIndex].votes += 1;
 
     await poll.save();
+
+    // Broadcast updated poll results
+    io.to(pollId).emit("poll-updated", poll);
 
     res.status(200).json({
       success: true,

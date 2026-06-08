@@ -29,12 +29,18 @@ const io = new Server(server, {
   },
 });
 
+export { io };
+
 io.on("connection", (socket) => {
   console.log("User Connected:", socket.id);
 
   socket.on("join-poll", (pollId) => {
     socket.join(pollId);
-  });
+
+    console.log(
+        `Socket ${socket.id} joined poll room ${pollId}`
+    );
+    });
 
   socket.on("disconnect", () => {
     console.log("User Disconnected");
