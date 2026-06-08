@@ -5,7 +5,11 @@ import api from "../services/api";
 import Loader from "../components/Loader";
 import Header from "../components/Header";
 
-const socket = io("http://localhost:5000");
+const socket = io(
+  import.meta.env.VITE_SOCKET_URL ||
+    "http://localhost:5000"
+);
+
 
 function PollPage() {
   const { id } = useParams();
