@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 
@@ -9,6 +9,21 @@ function CreatePoll() {
   const [options, setOptions] = useState(["", ""]);
   const [pollLink, setPollLink] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [recentPolls, setRecentPolls] = useState([]);
+
+  //Fetch Polls
+  useEffect(() => {
+    fetchRecentPolls();
+    }, []);
+
+    const fetchRecentPolls = async () => {
+    try {
+        const res = await api.get("/polls");
+        setRecentPolls(res.data.polls);
+    } catch (error) {
+        console.error(error);
+    }
+    };
 
   const handleOptionChange = (index, value) => {
     const updated = [...options];
@@ -69,6 +84,44 @@ function CreatePoll() {
 
   return (
     <div style={{ maxWidth: "600px", margin: "40px auto" }}>
+
+        {/* Show Recent Polls */}
+        <h2>Recent Polls</h2>
+
+        {recentPolls.length === 0 ? (
+        <p>No polls created yet.</p>
+        ) : (
+        recentPolls.map((poll) => (
+            <div
+            key={poll._id}
+            style={{
+                border: "1px solid #ddd",
+                padding: "12px",
+                marginBottom: "10px",
+                borderRadius: "8px",
+            }}
+            >
+            <h4>{poll.question}</h4>
+
+            <p>
+                {poll.status === "open"
+                ? "🟢 Open"
+                : "🔴 Closed"}
+            </p>
+
+            <button
+                onClick={() =>
+                navigate(`/poll/${poll._id}`)
+                }
+            >
+                Open Poll
+            </button>
+            </div>
+        ))
+        )}
+
+        <hr />
+
       <h1>Create Poll</h1>
 
       <form onSubmit={handleSubmit}>

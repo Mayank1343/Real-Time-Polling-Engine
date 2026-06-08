@@ -211,3 +211,24 @@ export const closePoll = async (req, res) => {
     });
   }
 };
+
+//Recent Polls Dashboard
+export const getAllPolls = async (req, res) => {
+    try {
+        const polls = await Poll.find()
+        .sort({ createdAt: -1 })
+        .limit(20);
+
+        res.status(200).json({
+        success: true,
+        polls,
+        });
+    } catch (error) {
+        console.error("Get All Polls Error:", error);
+
+        res.status(500).json({
+        success: false,
+        message: "Failed to fetch polls",
+        });
+    }
+    };
