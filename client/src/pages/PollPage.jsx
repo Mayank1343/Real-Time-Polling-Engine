@@ -70,6 +70,10 @@ function PollPage() {
     0
   );
 
+  const winner = [...poll.options].sort(
+    (a, b) => b.votes - a.votes
+    )[0];
+
   return (
     <div
       style={{
@@ -124,7 +128,30 @@ function PollPage() {
 
       <hr />
 
+      <div
+        style={{
+            padding: "15px",
+            marginBottom: "20px",
+            background: "#e8f5e9",
+            borderRadius: "8px",
+        }}
+        >
+        🏆 Leading Option:
+        <strong> {winner.text}</strong>
+        </div>
+
       <h2>Live Results</h2>
+
+      <div
+        style={{
+            padding: "15px",
+            marginBottom: "20px",
+            background: "#f5f5f5",
+            borderRadius: "8px",
+        }}
+        >
+        <strong>Total Votes:</strong> {totalVotes}
+        </div>
 
       {poll.options.map((option, index) => {
         const percentage =
@@ -137,8 +164,20 @@ function PollPage() {
             key={index}
             style={{ marginBottom: "15px" }}
           >
-            <div>
-              {option.text} ({option.votes})
+            <div
+            style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "5px",
+            }}
+            >
+            <span>{option.text}</span>
+
+            <span>
+                {option.votes} vote{option.votes !== 1 ? "s" : ""}
+                {" "}
+                ({percentage.toFixed(1)}%)
+            </span>
             </div>
 
             <div
@@ -150,12 +189,13 @@ function PollPage() {
             >
               <div
                 style={{
-                  width: `${percentage}%`,
-                  height: "100%",
-                  background: "#4caf50",
-                  borderRadius: "5px",
+                    width: `${percentage}%`,
+                    height: "100%",
+                    background: "#4caf50",
+                    borderRadius: "5px",
+                    transition: "width 0.4s ease",
                 }}
-              />
+                />
             </div>
           </div>
         );
