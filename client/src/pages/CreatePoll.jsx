@@ -15,22 +15,23 @@ function CreatePoll() {
   const [loadingPolls, setLoadingPolls] = useState(true);
   const [duration, setDuration] = useState(60);
 
-  //Fetch Polls
-  useEffect(() => {
+
+    async function fetchRecentPolls() {
+    try {
+        const res = await api.get("/polls");
+        setRecentPolls(res.data.polls);
+    } catch (error) {
+        console.error(error);
+    } finally {
+        setLoadingPolls(false);
+    }
+    }
+
+    useEffect(() => {
     fetchRecentPolls();
     }, []);
 
-    const fetchRecentPolls = async () => {
-        try {
-            const res = await api.get("/polls");
-            setRecentPolls(res.data.polls);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoadingPolls(false);
-        }
-        };
-
+    
   const handleOptionChange = (index, value) => {
     const updated = [...options];
     updated[index] = value;
