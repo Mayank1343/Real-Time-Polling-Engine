@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import api from "../services/api";
+import Loader from "../components/Loader";
+import Header from "../components/Header";
 
 const socket = io("http://localhost:5000");
 
@@ -61,7 +63,7 @@ function PollPage() {
     }
   };
 
-  if (loading) return <h2>Loading...</h2>;
+  if (loading) return <Loader />;
 
   if (!poll) return <h2>Poll not found</h2>;
 
@@ -75,12 +77,24 @@ function PollPage() {
     )[0];
 
   return (
-    <div
-      style={{
-        maxWidth: "700px",
-        margin: "40px auto",
-      }}
+  <div className="container">
+  <Header />
+    {poll.expiresAt && (
+    <p
+        style={{
+        marginTop: "10px",
+        color: "#6b7280",
+        }}
     >
+        ⏳ Expires:
+        {" "}
+        {new Date(
+        poll.expiresAt
+        ).toLocaleString()}
+    </p>
+    )}
+    <div className="container">
+    <div className="card">
       <h1>{poll.question}</h1>
 
       <div
@@ -118,6 +132,7 @@ function PollPage() {
             <br />
 
             <button
+            className="success-btn"
             disabled={selectedOption === null}
             onClick={handleVote}
             >
@@ -128,11 +143,8 @@ function PollPage() {
 
         {poll.status === "open" && (
         <button
-            onClick={handleClosePoll}
-            style={{
-            marginLeft: "10px",
-            marginTop: "15px",
-            }}
+        className="danger-btn"
+        onClick={handleClosePoll}
         >
             Close Poll
         </button>
@@ -220,6 +232,9 @@ function PollPage() {
         );
       })}
     </div>
+    </div>
+</div>
+
   );
 }
 

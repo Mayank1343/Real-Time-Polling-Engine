@@ -7,12 +7,17 @@ import { io } from "../server.js";
  * Expects:
  * {
  *   question: "...",
- *   options: ["A", "B", "C"]
+ *   options: ["A", "B", "C"],
+ *   duration: 60 // minutes
  * }
  */
 export const createPoll = async (req, res) => {
   try {
-    const { question, options } = req.body;
+    const {
+      question,
+      options,
+      duration = 60, // default 1 hour
+    } = req.body;
 
     if (!question || !options || options.length < 2) {
       return res.status(400).json({
@@ -25,9 +30,14 @@ export const createPoll = async (req, res) => {
       text: option,
     }));
 
+    const expiresAt = new Date(
+      Date.now() + duration * 60 * 1000
+    );
+
     const poll = await Poll.create({
       question,
       options: formattedOptions,
+      expiresAt,
     });
 
     res.status(201).json({
@@ -58,6 +68,16 @@ export const getPollById = async (req, res) => {
       });
     }
 
+    // Auto close expired polls
+    if (
+      poll.status === "open" &&
+      poll.expiresAt &&
+      new Date() > poll.expiresAt
+    ) {
+      poll.status = "closed";
+      await poll.save();
+    }
+
     res.status(200).json({
       success: true,
       poll,
@@ -74,10 +94,6 @@ export const getPollById = async (req, res) => {
 
 /*
  * Cast a vote on a poll
- * Body:
- * {
- *   optionIndex: 0
- * }
  */
 export const votePoll = async (req, res) => {
   try {
@@ -93,7 +109,23 @@ export const votePoll = async (req, res) => {
       });
     }
 
-    // Closed polls cannot receive votes
+    // Auto expire poll before accepting vote
+    if (
+      poll.status === "open" &&
+      poll.expiresAt &&
+      new Date() > poll.expiresAt
+    ) {
+      poll.status = "closed";
+      await poll.save();
+
+      io.to(pollId).emit("poll-updated", poll);
+
+      return res.status(400).json({
+        success: false,
+        message: "Poll has expired",
+      });
+    }
+
     if (poll.status === "closed") {
       return res.status(400).json({
         success: false,
@@ -101,7 +133,6 @@ export const votePoll = async (req, res) => {
       });
     }
 
-    // Validate selected option
     if (
       optionIndex === undefined ||
       optionIndex < 0 ||
@@ -113,9 +144,9 @@ export const votePoll = async (req, res) => {
       });
     }
 
-    // Using IP as voter identity for this assignment
     const voterId =
-        req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+      req.headers["x-forwarded-for"] ||
+      req.socket.remoteAddress;
 
     const existingVote = await Vote.findOne({
       pollId,
@@ -129,19 +160,16 @@ export const votePoll = async (req, res) => {
       });
     }
 
-    // Save vote record
     await Vote.create({
       pollId,
       voterId,
       selectedOption: optionIndex,
     });
 
-    // Increment vote count
     poll.options[optionIndex].votes += 1;
 
     await poll.save();
 
-    // Broadcast updated poll results
     io.to(pollId).emit("poll-updated", poll);
 
     res.status(200).json({
@@ -152,7 +180,6 @@ export const votePoll = async (req, res) => {
   } catch (error) {
     console.error("Vote Poll Error:", error);
 
-    // Handles duplicate key race conditions
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
@@ -167,10 +194,8 @@ export const votePoll = async (req, res) => {
   }
 };
 
-
 /*
  * Close a poll manually
- * Once closed, no further votes are allowed
  */
 export const closePoll = async (req, res) => {
   try {
@@ -194,8 +219,10 @@ export const closePoll = async (req, res) => {
 
     await poll.save();
 
-    // Notify connected clients immediately
-    io.to(poll._id.toString()).emit("poll-updated", poll);
+    io.to(poll._id.toString()).emit(
+      "poll-updated",
+      poll
+    );
 
     res.status(200).json({
       success: true,
@@ -212,23 +239,52 @@ export const closePoll = async (req, res) => {
   }
 };
 
-//Recent Polls Dashboard
+/*
+ * Recent Polls Dashboard
+ */
 export const getAllPolls = async (req, res) => {
-    try {
-        const polls = await Poll.find()
-        .sort({ createdAt: -1 })
-        .limit(20);
+  try {
+    const polls = await Poll.find()
+      .sort({ createdAt: -1 })
+      .limit(5);
 
-        res.status(200).json({
-        success: true,
-        polls,
-        });
-    } catch (error) {
-        console.error("Get All Polls Error:", error);
+    res.status(200).json({
+      success: true,
+      polls,
+    });
+  } catch (error) {
+    console.error("Get All Polls Error:", error);
 
-        res.status(500).json({
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch polls",
+    });
+  }
+};
+
+export const deletePoll = async (req, res) => {
+  try {
+    const poll = await Poll.findByIdAndDelete(
+      req.params.id
+    );
+
+    if (!poll) {
+      return res.status(404).json({
         success: false,
-        message: "Failed to fetch polls",
-        });
+        message: "Poll not found",
+      });
     }
-    };
+
+    res.status(200).json({
+      success: true,
+      message: "Poll deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete Poll Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete poll",
+    });
+  }
+};

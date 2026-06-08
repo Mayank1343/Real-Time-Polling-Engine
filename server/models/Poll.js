@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-// Each option stores its text and current vote count
+// Each option stores its text and vote count
 const optionSchema = new mongoose.Schema({
   text: {
     type: String,
@@ -25,17 +25,21 @@ const pollSchema = new mongoose.Schema(
     options: {
       type: [optionSchema],
       validate: {
-        validator: (value) => value.length >= 2,
-        message: "A poll must have at least two options",
+        validator: (options) => options.length >= 2,
+        message: "A poll must have at least 2 options",
       },
     },
 
-    // Open polls can receive votes,
-    // closed polls are read-only.
     status: {
       type: String,
       enum: ["open", "closed"],
       default: "open",
+    },
+
+    // Automatic poll expiry
+    expiresAt: {
+      type: Date,
+      default: null,
     },
   },
   {

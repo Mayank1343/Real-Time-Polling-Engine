@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import Loader from "../components/Loader";
+import Header from "../components/Header";
 
 function CreatePoll() {
   const navigate = useNavigate();
@@ -10,6 +12,8 @@ function CreatePoll() {
   const [pollLink, setPollLink] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recentPolls, setRecentPolls] = useState([]);
+  const [loadingPolls, setLoadingPolls] = useState(true);
+  const [duration, setDuration] = useState(60);
 
   //Fetch Polls
   useEffect(() => {
@@ -17,13 +21,15 @@ function CreatePoll() {
     }, []);
 
     const fetchRecentPolls = async () => {
-    try {
-        const res = await api.get("/polls");
-        setRecentPolls(res.data.polls);
-    } catch (error) {
-        console.error(error);
-    }
-    };
+        try {
+            const res = await api.get("/polls");
+            setRecentPolls(res.data.polls);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoadingPolls(false);
+        }
+        };
 
   const handleOptionChange = (index, value) => {
     const updated = [...options];
@@ -57,7 +63,8 @@ function CreatePoll() {
       const response = await api.post("/polls", {
         question,
         options: validOptions,
-      });
+        duration,
+        });
 
       const pollId = response.data.poll._id;
 
@@ -68,7 +75,9 @@ function CreatePoll() {
     } catch (error) {
       console.error(error);
       alert("Failed to create poll");
-    }
+    } finally {
+      setIsSubmitting(false);
+}
     
   };
 
@@ -82,57 +91,142 @@ function CreatePoll() {
     }
     };
 
+    const deletePoll = async (pollId) => {
+  const confirmed = window.confirm(
+    "Delete this poll permanently?"
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await api.delete(`/polls/${pollId}`);
+
+    setRecentPolls((prev) =>
+      prev.filter(
+        (poll) => poll._id !== pollId
+      )
+    );
+  } catch (error) {
+    console.error(error);
+    alert("Failed to delete poll");
+  }
+};
+
+
+
   return (
-    <div style={{ maxWidth: "600px", margin: "40px auto" }}>
+  <div className="container">
+    <Header />
 
-        {/* Show Recent Polls */}
-        <h2>Recent Polls</h2>
+    <div className="card">
+      {/* Recent Polls Section */}
+      <h2 style={{ marginBottom: "20px" }}>
+        Recent Polls
+      </h2>
 
-        {recentPolls.length === 0 ? (
-        <p>No polls created yet.</p>
-        ) : (
+      {loadingPolls ? (
+        <Loader />
+      ) : recentPolls.length === 0 ? (
+        <p
+          style={{
+            textAlign: "center",
+            padding: "30px",
+            color: "#6b7280",
+          }}
+        >
+          No polls available yet.
+          <br />
+          Create your first poll below.
+        </p>
+      ) : (
         recentPolls.map((poll) => (
-            <div
+          <div
             key={poll._id}
+            className="poll-card"
+          >
+            <div
             style={{
-                border: "1px solid #ddd",
-                padding: "12px",
-                marginBottom: "10px",
-                borderRadius: "8px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
             }}
             >
-            <h4>{poll.question}</h4>
+              <div>
+                <h4 style={{ marginBottom: "6px" }}>
+                  {poll.question}
+                </h4>
 
-            <p>
-                {poll.status === "open"
-                ? "🟢 Open"
-                : "🔴 Closed"}
-            </p>
+                <span
+                  style={{
+                    display: "inline-block",
+                    padding: "4px 10px",
+                    borderRadius: "20px",
+                    background:
+                      poll.status === "open"
+                        ? "#d4edda"
+                        : "#f8d7da",
+                  }}
+                >
+                  {poll.status === "open"
+                    ? "🟢 Open"
+                    : "🔴 Closed"}
+                </span>
+              </div>
 
+              <div
+  style={{
+    display: "flex",
+    gap: "10px",
+  }}
+>
+        <button
+            className="primary-btn"
+            onClick={() =>
+            navigate(`/poll/${poll._id}`)
+            }
+        >
+            Open
+        </button>
+
+        {poll.status === "closed" && (
             <button
-                onClick={() =>
-                navigate(`/poll/${poll._id}`)
-                }
+            className="danger-btn"
+            onClick={() =>
+                deletePoll(poll._id)
+            }
             >
-                Open Poll
+            Delete
             </button>
+  )}
+</div>
             </div>
+          </div>
         ))
-        )}
+      )}
 
-        <hr />
+      <hr
+        style={{
+          margin: "30px 0",
+        }}
+      />
 
-      <h1>Create Poll</h1>
+      {/* Create Poll Section */}
+      <h2
+        style={{
+          marginBottom: "20px",
+        }}
+      >
+        Create New Poll
+      </h2>
 
       <form onSubmit={handleSubmit}>
         <input
           placeholder="Enter poll question"
           value={question}
-          onChange={(e) => setQuestion(e.target.value)}
+          onChange={(e) =>
+            setQuestion(e.target.value)
+          }
         />
-
-        <br />
-        <br />
 
         {options.map((option, index) => (
           <div key={index}>
@@ -140,73 +234,148 @@ function CreatePoll() {
               placeholder={`Option ${index + 1}`}
               value={option}
               onChange={(e) =>
-                handleOptionChange(index, e.target.value)
+                handleOptionChange(
+                  index,
+                  e.target.value
+                )
               }
             />
           </div>
         ))}
 
-        <br />
+        {/* Auto Expiry */}
+        <div style={{ marginTop: "10px" }}>
+          <label
+            style={{
+              display: "block",
+              marginBottom: "8px",
+              fontWeight: "600",
+            }}
+          >
+            Auto Close After
+          </label>
 
-        <button type="button" onClick={addOption}>
-          Add Option
-        </button>
+          <select
+            value={duration}
+            onChange={(e) =>
+              setDuration(Number(e.target.value))
+            }
+            style={{
+              width: "100%",
+              padding: "12px",
+              borderRadius: "8px",
+              border: "1px solid #d1d5db",
+            }}
+          >
+            <option value={5}>
+              5 Minutes
+            </option>
 
-        <button
-        type="submit"
-        disabled={isSubmitting}
+            <option value={30}>
+              30 Minutes
+            </option>
+
+            <option value={60}>
+              1 Hour
+            </option>
+
+            <option value={1440}>
+              1 Day
+            </option>
+          </select>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            marginTop: "15px",
+          }}
         >
-        {isSubmitting ? "Creating..." : "Create Poll"}
-        </button>
+          <button
+            type="button"
+            onClick={addOption}
+          >
+            Add Option
+          </button>
+
+          <button
+            type="submit"
+            className="primary-btn"
+            disabled={isSubmitting}
+          >
+            {isSubmitting
+              ? "Creating..."
+              : "Create Poll"}
+          </button>
+        </div>
       </form>
 
-        {/* Show Link After Creation */}
-            {pollLink && (
+      {/* Share Link Section */}
+      {pollLink && (
         <div
-            style={{
+          style={{
             marginTop: "30px",
-            padding: "15px",
-            border: "1px solid #ddd",
-            borderRadius: "8px",
-            }}
+            padding: "20px",
+            background: "#f8fafc",
+            borderRadius: "12px",
+            border: "1px solid #d1d5db",
+          }}
         >
-            <h3>Poll Created Successfully 🎉</h3>
+          <h3
+            style={{
+              marginBottom: "10px",
+            }}
+          >
+            🎉 Poll Created Successfully
+          </h3>
 
-            <p>Share this link with others:</p>
+          <p
+            style={{
+              marginBottom: "10px",
+            }}
+          >
+            Share this link with others:
+          </p>
 
-            <input
+          <input
             value={pollLink}
             readOnly
+          />
+
+          <div
             style={{
-                width: "100%",
-                padding: "10px",
+              display: "flex",
+              gap: "10px",
+              marginTop: "10px",
             }}
-            />
-
-            <br />
-            <br />
-
-            <button onClick={copyLink}>
-            Copy Link
+          >
+            <button
+              className="success-btn"
+              onClick={copyLink}
+            >
+              Copy Link
             </button>
 
             <button
-            style={{ marginLeft: "10px" }}
-            onClick={() =>
+              className="primary-btn"
+              onClick={() =>
                 navigate(
-                pollLink.replace(
+                  pollLink.replace(
                     window.location.origin,
                     ""
+                  )
                 )
-                )
-            }
+              }
             >
-            Open Poll
+              Open Poll
             </button>
+          </div>
         </div>
-        )}
+      )}
     </div>
-  );
+  </div>
+);
 }
 
 export default CreatePoll;
