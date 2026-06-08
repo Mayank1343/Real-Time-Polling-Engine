@@ -7,6 +7,7 @@ function CreatePoll() {
 
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState(["", ""]);
+  const [pollLink, setPollLink] = useState("");
 
   const handleOptionChange = (index, value) => {
     const updated = [...options];
@@ -27,12 +28,27 @@ function CreatePoll() {
         options,
       });
 
-      navigate(`/poll/${response.data.poll._id}`);
+      const pollId = response.data.poll._id;
+
+    const shareableLink =
+    `${window.location.origin}/poll/${pollId}`;
+
+    setPollLink(shareableLink);
     } catch (error) {
       console.error(error);
       alert("Failed to create poll");
     }
   };
+
+  //Copy function
+    const copyLink = async () => {
+    try {
+        await navigator.clipboard.writeText(pollLink);
+        alert("Link copied successfully!");
+    } catch (error) {
+        console.error(error);
+    }
+    };
 
   return (
     <div style={{ maxWidth: "600px", margin: "40px auto" }}>
@@ -70,6 +86,52 @@ function CreatePoll() {
           Create Poll
         </button>
       </form>
+
+        {/* Show Link After Creation */}
+            {pollLink && (
+        <div
+            style={{
+            marginTop: "30px",
+            padding: "15px",
+            border: "1px solid #ddd",
+            borderRadius: "8px",
+            }}
+        >
+            <h3>Poll Created Successfully 🎉</h3>
+
+            <p>Share this link with others:</p>
+
+            <input
+            value={pollLink}
+            readOnly
+            style={{
+                width: "100%",
+                padding: "10px",
+            }}
+            />
+
+            <br />
+            <br />
+
+            <button onClick={copyLink}>
+            Copy Link
+            </button>
+
+            <button
+            style={{ marginLeft: "10px" }}
+            onClick={() =>
+                navigate(
+                pollLink.replace(
+                    window.location.origin,
+                    ""
+                )
+                )
+            }
+            >
+            Open Poll
+            </button>
+        </div>
+        )}
     </div>
   );
 }
