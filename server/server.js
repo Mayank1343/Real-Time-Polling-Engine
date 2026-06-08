@@ -8,6 +8,7 @@ import connectDB from "./db.js";
 
 import Poll from "./models/Poll.js";
 import Vote from "./models/Vote.js";
+import pollRoutes from "./routes/pollRoutes.js";
 
 dotenv.config();
 
@@ -17,6 +18,8 @@ connectDB();
 
 app.use(cors());
 app.use(express.json());
+
+app.use("/api/polls", pollRoutes);
 
 const server = http.createServer(app);
 
