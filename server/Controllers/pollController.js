@@ -1,4 +1,5 @@
 import Poll from "../models/Poll.js";
+import Vote from "../models/Vote.js";
 
 /*
  * Create a new poll
@@ -66,6 +67,98 @@ export const getPollById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to fetch poll",
+    });
+  }
+};
+
+/*
+ * Cast a vote on a poll
+ * Body:
+ * {
+ *   optionIndex: 0
+ * }
+ */
+export const votePoll = async (req, res) => {
+  try {
+    const { optionIndex } = req.body;
+    const pollId = req.params.id;
+
+    const poll = await Poll.findById(pollId);
+
+    if (!poll) {
+      return res.status(404).json({
+        success: false,
+        message: "Poll not found",
+      });
+    }
+
+    // Closed polls cannot receive votes
+    if (poll.status === "closed") {
+      return res.status(400).json({
+        success: false,
+        message: "Voting has been closed",
+      });
+    }
+
+    // Validate selected option
+    if (
+      optionIndex === undefined ||
+      optionIndex < 0 ||
+      optionIndex >= poll.options.length
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid option selected",
+      });
+    }
+
+    // Using IP as voter identity for this assignment
+    const voterId =
+        req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+
+    const existingVote = await Vote.findOne({
+      pollId,
+      voterId,
+    });
+
+    if (existingVote) {
+      return res.status(400).json({
+        success: false,
+        message: "You have already voted on this poll",
+      });
+    }
+
+    // Save vote record
+    await Vote.create({
+      pollId,
+      voterId,
+      selectedOption: optionIndex,
+    });
+
+    // Increment vote count
+    poll.options[optionIndex].votes += 1;
+
+    await poll.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Vote recorded successfully",
+      poll,
+    });
+  } catch (error) {
+    console.error("Vote Poll Error:", error);
+
+    // Handles duplicate key race conditions
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "Duplicate vote detected",
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to record vote",
     });
   }
 };
