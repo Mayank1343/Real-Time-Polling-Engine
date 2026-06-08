@@ -16,7 +16,15 @@ const app = express();
 
 connectDB();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://real-time-polling-engine.onrender.com",
+    ],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 app.use("/api/polls", pollRoutes);
