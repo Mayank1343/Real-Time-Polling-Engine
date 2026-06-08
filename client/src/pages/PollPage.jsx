@@ -83,10 +83,22 @@ function PollPage() {
     >
       <h1>{poll.question}</h1>
 
-      <p>
-        Status:
-        <strong> {poll.status.toUpperCase()}</strong>
-      </p>
+      <div
+        style={{
+            display: "inline-block",
+            padding: "8px 12px",
+            borderRadius: "20px",
+            background:
+            poll.status === "open"
+                ? "#d4edda"
+                : "#f8d7da",
+            marginBottom: "20px",
+        }}
+        >
+        {poll.status === "open"
+            ? "🟢 Open"
+            : "🔴 Closed"}
+        </div>
 
       {poll.status === "open" && !hasVoted && (
         <>
@@ -125,6 +137,13 @@ function PollPage() {
             Close Poll
         </button>
         )}
+            <p>
+            Created:
+            {" "}
+            {new Date(
+                poll.createdAt
+            ).toLocaleString()}
+            </p>
 
       <hr />
 

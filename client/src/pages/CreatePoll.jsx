@@ -8,6 +8,7 @@ function CreatePoll() {
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState(["", ""]);
   const [pollLink, setPollLink] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleOptionChange = (index, value) => {
     const updated = [...options];
@@ -20,12 +21,27 @@ function CreatePoll() {
   };
 
   const handleSubmit = async (e) => {
+    // Basic validation before hitting the API
+    if (!question.trim()) {
+    alert("Please enter a poll question");
+    return;
+    }
+
+    const validOptions = options.filter(
+    (option) => option.trim() !== ""
+    );
+
+    if (validOptions.length < 2) {
+    alert("Please provide at least 2 valid options");
+    return;
+    }
     e.preventDefault();
+    setIsSubmitting(true);
 
     try {
       const response = await api.post("/polls", {
         question,
-        options,
+        options: validOptions,
       });
 
       const pollId = response.data.poll._id;
@@ -38,6 +54,7 @@ function CreatePoll() {
       console.error(error);
       alert("Failed to create poll");
     }
+    
   };
 
   //Copy function
@@ -82,8 +99,11 @@ function CreatePoll() {
           Add Option
         </button>
 
-        <button type="submit">
-          Create Poll
+        <button
+        type="submit"
+        disabled={isSubmitting}
+        >
+        {isSubmitting ? "Creating..." : "Create Poll"}
         </button>
       </form>
 
