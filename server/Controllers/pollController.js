@@ -166,3 +166,48 @@ export const votePoll = async (req, res) => {
     });
   }
 };
+
+
+/*
+ * Close a poll manually
+ * Once closed, no further votes are allowed
+ */
+export const closePoll = async (req, res) => {
+  try {
+    const poll = await Poll.findById(req.params.id);
+
+    if (!poll) {
+      return res.status(404).json({
+        success: false,
+        message: "Poll not found",
+      });
+    }
+
+    if (poll.status === "closed") {
+      return res.status(400).json({
+        success: false,
+        message: "Poll is already closed",
+      });
+    }
+
+    poll.status = "closed";
+
+    await poll.save();
+
+    // Notify connected clients immediately
+    io.to(poll._id.toString()).emit("poll-updated", poll);
+
+    res.status(200).json({
+      success: true,
+      message: "Poll closed successfully",
+      poll,
+    });
+  } catch (error) {
+    console.error("Close Poll Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to close poll",
+    });
+  }
+};
