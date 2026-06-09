@@ -369,11 +369,11 @@ Implemented auto-expiry timestamps and automatic poll closure.
 
 ### Poll Creation
 
-_Add screenshot here_
+<img width="1062" height="513" alt="PollImage" src="https://github.com/user-attachments/assets/1fb9dcd1-fafb-46b9-b2f1-d90e9fb7693d" />
 
 ### Live Results
 
-_Add screenshot here_
+<img width="1906" height="977" alt="result" src="https://github.com/user-attachments/assets/f13754c1-45b3-4bd6-9bfa-7442c03ba217" />
 
 ---
 
